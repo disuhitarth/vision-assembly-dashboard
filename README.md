@@ -13,7 +13,7 @@
 *Real-time production monitoring with automated defect detection*
 
 ### Vision System - Live Camera Feed  
-![Vision System](screenshots/vision-system.png)
+![Vision System](screenshots/Stats.png)
 *Live camera feed with defect detection overlays and confidence scoring*
 
 ### Analytics Dashboard

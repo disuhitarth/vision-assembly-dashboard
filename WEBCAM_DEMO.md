@@ -187,6 +187,6 @@ Your **Vision Assembly Dashboard** now combines:
 ---
 
 ### **🔥 Pro Demo Tip:**
-*Start with "This is a live camera feed showing real-time AI-powered quality inspection..."* 
+*Start with "This is a live camera feed showing real-time automated quality inspection..."* 
 
 **Then watch your audience be impressed!** 😎

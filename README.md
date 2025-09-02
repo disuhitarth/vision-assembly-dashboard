@@ -4,13 +4,13 @@
 ![Node.js](https://img.shields.io/badge/node.js-18+-green.svg)
 ![Status](https://img.shields.io/badge/status-production--ready-brightgreen.svg)
 
-**A production-ready industrial vision inspection and PLC control dashboard with dual-mode operation (Demo/Live) and AI-powered troubleshooting.**
+**A production-ready industrial vision inspection and PLC control dashboard with dual-mode operation (Demo/Live) and intelligent troubleshooting.**
 
 ## 📸 Screenshots
 
 ### Main Dashboard - Live Vision Inspection
 ![Main Dashboard](screenshots/main-dashboard.png)
-*Real-time production monitoring with AI-powered defect detection*
+*Real-time production monitoring with automated defect detection*
 
 ### Vision System - Live Camera Feed  
 ![Vision System](screenshots/vision-system.png)

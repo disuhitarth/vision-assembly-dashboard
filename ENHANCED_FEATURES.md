@@ -197,7 +197,7 @@ Your Industrial Vision Dashboard now includes **comprehensive instructions, tool
 ### **🎬 Professional Demo Flow:**
 
 **Opening (30 seconds):**
-*"This is an industrial-grade vision inspection dashboard with live camera integration and AI-powered defect detection..."*
+*"This is an industrial-grade vision inspection dashboard with live camera integration and automated defect detection..."*
 
 **Camera Demo (60 seconds):**
 *"Let me start the vision system... [click Start Camera] You can see live video with real-time AI defect detection. Watch these red bounding boxes appear showing defects with confidence scores..."*
@@ -254,6 +254,6 @@ Your **Enhanced Industrial Vision Dashboard** now includes:
 ---
 
 ### **🎯 Pro Tip for Demos:**
-*Start with: "Let me show you our AI-powered vision inspection system with live camera feed..." then click ❓ Help to show the comprehensive built-in user guide!*
+*Start with: "Let me show you our automated vision inspection system with live camera feed..." then click ❓ Help to show the comprehensive built-in user guide!*
 
 **Your industrial dashboard is now professional-grade and demo-ready!** 🚀

@@ -1,0 +1,862 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vision Assembly Dashboard - Live Camera Demo</title>
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios@1.6.0/dist/axios.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Consolas', 'Monaco', monospace;
+            background: #0f172a;
+            color: #e2e8f0;
+            line-height: 1.6;
+        }
+        
+        .header {
+            background: #1e293b;
+            padding: 1rem 2rem;
+            border-bottom: 2px solid #334155;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .logo {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #3b82f6;
+        }
+        
+        .status-badge {
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            font-weight: bold;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .status-running {
+            background: #064e3b;
+            color: #10b981;
+            border: 1px solid #059669;
+        }
+        
+        .status-stopped {
+            background: #7f1d1d;
+            color: #ef4444;
+            border: 1px solid #dc2626;
+        }
+        
+        .status-fault {
+            background: #7f1d1d;
+            color: #fca5a5;
+            border: 1px solid #dc2626;
+            animation: pulse 1s infinite;
+        }
+        
+        .main-grid {
+            display: grid;
+            grid-template-columns: 1fr 400px;
+            gap: 1.5rem;
+            padding: 2rem;
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+        
+        .left-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+        
+        .right-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+        
+        .card {
+            background: #1e293b;
+            border: 1px solid #334155;
+            border-radius: 0.75rem;
+            padding: 1.5rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+        }
+        
+        .card h3 {
+            color: #f1f5f9;
+            margin-bottom: 1rem;
+            font-size: 1.1rem;
+            border-bottom: 1px solid #334155;
+            padding-bottom: 0.5rem;
+        }
+        
+        .metric {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.5rem 0;
+            border-bottom: 1px solid #334155;
+        }
+        
+        .metric:last-child {
+            border-bottom: none;
+        }
+        
+        .metric-label {
+            color: #94a3b8;
+            font-size: 0.9rem;
+        }
+        
+        .metric-value {
+            font-weight: bold;
+            font-size: 1.1rem;
+            color: #e2e8f0;
+        }
+        
+        .metric-value.good {
+            color: #10b981;
+        }
+        
+        .metric-value.warning {
+            color: #f59e0b;
+        }
+        
+        .metric-value.critical {
+            color: #ef4444;
+        }
+        
+        .vision-container {
+            position: relative;
+            background: #000;
+            border-radius: 0.5rem;
+            overflow: hidden;
+        }
+        
+        #webcamVideo {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+        
+        .vision-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            pointer-events: none;
+        }
+        
+        .defect-box {
+            position: absolute;
+            border: 3px solid #ef4444;
+            background: rgba(239, 68, 68, 0.1);
+            border-radius: 4px;
+            animation: defectPulse 2s ease-in-out infinite;
+        }
+        
+        .defect-label {
+            position: absolute;
+            top: -25px;
+            left: 0;
+            background: #ef4444;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 3px;
+            font-size: 12px;
+            font-weight: bold;
+            white-space: nowrap;
+        }
+        
+        @keyframes defectPulse {
+            0%, 100% { opacity: 0.8; }
+            50% { opacity: 0.4; }
+        }
+        
+        .camera-controls {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+        
+        .btn {
+            padding: 0.5rem 1rem;
+            border: none;
+            border-radius: 0.5rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .btn-primary {
+            background: #3b82f6;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: #2563eb;
+        }
+        
+        .btn-success {
+            background: #10b981;
+            color: white;
+        }
+        
+        .btn-success:hover {
+            background: #059669;
+        }
+        
+        .btn-danger {
+            background: #ef4444;
+            color: white;
+        }
+        
+        .btn-danger:hover {
+            background: #dc2626;
+        }
+        
+        .camera-status {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+        }
+        
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #ef4444;
+        }
+        
+        .status-dot.active {
+            background: #10b981;
+            animation: pulse 2s infinite;
+        }
+        
+        .log-container {
+            max-height: 200px;
+            overflow-y: auto;
+            background: #0f172a;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            font-family: 'Courier New', monospace;
+            font-size: 0.85rem;
+        }
+        
+        .log-entry {
+            padding: 0.25rem 0;
+            border-bottom: 1px solid #1e293b;
+        }
+        
+        .log-entry.error {
+            color: #fca5a5;
+        }
+        
+        .log-entry.warn {
+            color: #fcd34d;
+        }
+        
+        .log-entry.info {
+            color: #93c5fd;
+        }
+        
+        .log-entry.success {
+            color: #86efac;
+        }
+        
+        .connection-status {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .connection-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #ef4444;
+        }
+        
+        .connection-dot.connected {
+            background: #10b981;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        .timestamp {
+            color: #64748b;
+            font-size: 0.8rem;
+        }
+        
+        .emergency-stop {
+            background: #dc2626;
+            color: white;
+            border: none;
+            padding: 1rem 2rem;
+            border-radius: 0.5rem;
+            font-weight: bold;
+            font-size: 1.1rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            width: 100%;
+        }
+        
+        .emergency-stop:hover {
+            background: #b91c1c;
+            transform: scale(1.02);
+        }
+        
+        .inspection-stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 0.5rem;
+            margin-top: 1rem;
+        }
+        
+        .stat-item {
+            text-align: center;
+            padding: 0.5rem;
+            background: #0f172a;
+            border-radius: 0.5rem;
+        }
+        
+        .stat-number {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #3b82f6;
+        }
+        
+        .stat-label {
+            font-size: 0.8rem;
+            color: #64748b;
+        }
+        
+        @media (max-width: 1200px) {
+            .main-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="logo">📹 Vision Assembly Dashboard - Live Camera</div>
+        <div class="connection-status">
+            <div class="connection-dot" id="connectionDot"></div>
+            <span id="connectionStatus">Connecting...</span>
+            <span class="timestamp" id="timestamp"></span>
+        </div>
+    </div>
+    
+    <div class="main-grid">
+        <div class="left-panel">
+            <!-- Live Vision Feed -->
+            <div class="card">
+                <h3>📹 Live Vision System</h3>
+                <div class="camera-status">
+                    <div class="status-dot" id="cameraStatus"></div>
+                    <span id="cameraStatusText">Camera Offline</span>
+                </div>
+                <div class="camera-controls">
+                    <button class="btn btn-success" onclick="startCamera()">▶️ Start Camera</button>
+                    <button class="btn btn-danger" onclick="stopCamera()">⏹️ Stop Camera</button>
+                    <button class="btn btn-primary" onclick="captureFrame()">📸 Capture</button>
+                </div>
+                <div class="vision-container">
+                    <video id="webcamVideo" autoplay muted></video>
+                    <canvas id="captureCanvas" style="display: none;"></canvas>
+                    <div class="vision-overlay" id="defectOverlay"></div>
+                </div>
+                <div class="inspection-stats">
+                    <div class="stat-item">
+                        <div class="stat-number" id="inspectionCount">0</div>
+                        <div class="stat-label">Inspections</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-number" id="defectCount">0</div>
+                        <div class="stat-label">Defects Found</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-number" id="passRate">100%</div>
+                        <div class="stat-label">Pass Rate</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="right-panel">
+            <!-- Line Status -->
+            <div class="card">
+                <h3>📊 Line Status</h3>
+                <div class="status-badge" id="lineStatus">
+                    <span>●</span>
+                    <span id="lineStatusText">Connecting...</span>
+                </div>
+                <div style="margin-top: 1rem;">
+                    <div class="metric">
+                        <span class="metric-label">Mode</span>
+                        <span class="metric-value" id="mode">Live Camera</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">Parts Produced</span>
+                        <span class="metric-value" id="partCounter">0</span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Performance Metrics -->
+            <div class="card">
+                <h3>📈 Performance Metrics</h3>
+                <div class="metric">
+                    <span class="metric-label">OEE Score</span>
+                    <span class="metric-value good" id="oeeScore">87.5%</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">Quality Score</span>
+                    <span class="metric-value good" id="qualityScore">96.8%</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">Throughput</span>
+                    <span class="metric-value" id="throughput">142/150 pph</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">Cycle Time</span>
+                    <span class="metric-value" id="cycleTime">850ms</span>
+                </div>
+            </div>
+            
+            <!-- Process Variables -->
+            <div class="card">
+                <h3>🌡️ Process Variables</h3>
+                <div class="metric">
+                    <span class="metric-label">Temperature</span>
+                    <span class="metric-value" id="temperature">22.5°C</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">Pressure</span>
+                    <span class="metric-value" id="pressure">6.2 bar</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">Humidity</span>
+                    <span class="metric-value" id="humidity">45%</span>
+                </div>
+            </div>
+            
+            <!-- Emergency Controls -->
+            <div class="card">
+                <h3>🚨 Emergency Controls</h3>
+                <button class="emergency-stop" onclick="emergencyStop()">
+                    🛑 EMERGENCY STOP
+                </button>
+                <div style="margin-top: 1rem; font-size: 0.9rem; color: #64748b;">
+                    <p>⚠️ This will immediately halt all operations</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Event Log -->
+    <div style="max-width: 1600px; margin: 2rem auto; padding: 0 2rem;">
+        <div class="card">
+            <h3>📋 Live Event Log</h3>
+            <div class="log-container" id="eventLog">
+                <div class="log-entry info">[Live Demo] Vision Assembly Dashboard with real camera initialized</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let socket;
+        let connected = false;
+        let cameraActive = false;
+        let webcamStream = null;
+        let inspectionCount = 0;
+        let defectCount = 0;
+        let activeDefects = [];
+        
+        const API_URL = 'http://localhost:4000';
+        const video = document.getElementById('webcamVideo');
+        const canvas = document.getElementById('captureCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        // Update timestamp
+        function updateTimestamp() {
+            document.getElementById('timestamp').textContent = new Date().toLocaleTimeString();
+        }
+        setInterval(updateTimestamp, 1000);
+        updateTimestamp();
+        
+        // Camera functions
+        async function startCamera() {
+            try {
+                logEvent('info', 'Requesting camera access...');
+                
+                const constraints = {
+                    video: {
+                        width: { ideal: 1280 },
+                        height: { ideal: 720 },
+                        frameRate: { ideal: 30 }
+                    },
+                    audio: false
+                };
+                
+                webcamStream = await navigator.mediaDevices.getUserMedia(constraints);
+                video.srcObject = webcamStream;
+                
+                video.onloadedmetadata = () => {
+                    // Set canvas size to match video
+                    canvas.width = video.videoWidth;
+                    canvas.height = video.videoHeight;
+                    
+                    cameraActive = true;
+                    updateCameraStatus();
+                    logEvent('success', `Camera started: ${video.videoWidth}x${video.videoHeight}`);
+                    
+                    // Start automatic inspections every 3 seconds
+                    setInterval(performInspection, 3000);
+                };
+                
+            } catch (error) {
+                logEvent('error', `Camera access failed: ${error.message}`);
+                console.error('Camera error:', error);
+            }
+        }
+        
+        function stopCamera() {
+            if (webcamStream) {
+                webcamStream.getTracks().forEach(track => track.stop());
+                webcamStream = null;
+                video.srcObject = null;
+                cameraActive = false;
+                updateCameraStatus();
+                clearDefectOverlays();
+                logEvent('warn', 'Camera stopped');
+            }
+        }
+        
+        function updateCameraStatus() {
+            const statusDot = document.getElementById('cameraStatus');
+            const statusText = document.getElementById('cameraStatusText');
+            
+            if (cameraActive) {
+                statusDot.classList.add('active');
+                statusText.textContent = 'Camera Active';
+                statusText.style.color = '#10b981';
+            } else {
+                statusDot.classList.remove('active');
+                statusText.textContent = 'Camera Offline';
+                statusText.style.color = '#ef4444';
+            }
+        }
+        
+        function captureFrame() {
+            if (!cameraActive) {
+                logEvent('error', 'Camera is not active');
+                return;
+            }
+            
+            // Draw current video frame to canvas
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            
+            // Get image data
+            const imageData = canvas.toDataURL('image/jpeg', 0.8);
+            logEvent('info', 'Frame captured for analysis');
+            
+            // Simulate sending to vision API
+            performInspection();
+        }
+        
+        function performInspection() {
+            if (!cameraActive) return;
+            
+            inspectionCount++;
+            document.getElementById('inspectionCount').textContent = inspectionCount;
+            
+            // Clear previous defects
+            clearDefectOverlays();
+            
+            // Simulate AI defect detection (more realistic for camera demo)
+            const defectChance = 0.15; // 15% chance of defect detection
+            
+            if (Math.random() < defectChance) {
+                // Generate realistic defect detection
+                const defectTypes = [
+                    { name: 'foreign_object', color: '#ef4444' },
+                    { name: 'surface_scratch', color: '#f59e0b' },
+                    { name: 'contamination', color: '#ef4444' },
+                    { name: 'edge_defect', color: '#f59e0b' },
+                    { name: 'color_variation', color: '#6366f1' }
+                ];
+                
+                const randomDefect = defectTypes[Math.floor(Math.random() * defectTypes.length)];
+                const confidence = 0.65 + Math.random() * 0.3; // 65-95% confidence
+                
+                // Random position on video (avoid edges)
+                const videoRect = video.getBoundingClientRect();
+                const x = Math.random() * 0.6 + 0.2; // 20-80% of width
+                const y = Math.random() * 0.6 + 0.2; // 20-80% of height
+                const width = Math.random() * 0.15 + 0.05; // 5-20% of width
+                const height = Math.random() * 0.15 + 0.05; // 5-20% of height
+                
+                const defect = {
+                    id: generateUUID(),
+                    type: randomDefect.name,
+                    confidence: confidence,
+                    x: x,
+                    y: y,
+                    width: width,
+                    height: height,
+                    color: randomDefect.color,
+                    timestamp: Date.now()
+                };
+                
+                defectCount++;
+                activeDefects.push(defect);
+                
+                // Display defect overlay
+                displayDefectOverlay(defect);
+                
+                // Log the detection
+                logEvent('warn', `DEFECT: ${defect.type} detected (${(confidence * 100).toFixed(1)}% confidence)`);
+                
+                // Update stats
+                updateInspectionStats();
+                
+                // Remove defect overlay after 5 seconds
+                setTimeout(() => {
+                    removeDefectOverlay(defect.id);
+                }, 5000);
+            } else {
+                logEvent('success', 'Part PASSED inspection - No defects detected');
+            }
+        }
+        
+        function displayDefectOverlay(defect) {
+            const overlay = document.getElementById('defectOverlay');
+            const videoRect = video.getBoundingClientRect();
+            
+            // Create defect box
+            const defectBox = document.createElement('div');
+            defectBox.className = 'defect-box';
+            defectBox.id = `defect-${defect.id}`;
+            
+            // Position relative to video
+            defectBox.style.left = `${defect.x * 100}%`;
+            defectBox.style.top = `${defect.y * 100}%`;
+            defectBox.style.width = `${defect.width * 100}%`;
+            defectBox.style.height = `${defect.height * 100}%`;
+            defectBox.style.borderColor = defect.color;
+            defectBox.style.backgroundColor = defect.color + '20'; // 20% opacity
+            
+            // Create label
+            const label = document.createElement('div');
+            label.className = 'defect-label';
+            label.style.backgroundColor = defect.color;
+            label.textContent = `${defect.type.replace('_', ' ').toUpperCase()} ${(defect.confidence * 100).toFixed(0)}%`;
+            
+            defectBox.appendChild(label);
+            overlay.appendChild(defectBox);
+        }
+        
+        function removeDefectOverlay(defectId) {
+            const defectElement = document.getElementById(`defect-${defectId}`);
+            if (defectElement) {
+                defectElement.remove();
+            }
+            activeDefects = activeDefects.filter(d => d.id !== defectId);
+        }
+        
+        function clearDefectOverlays() {
+            const overlay = document.getElementById('defectOverlay');
+            overlay.innerHTML = '';
+            activeDefects = [];
+        }
+        
+        function updateInspectionStats() {
+            document.getElementById('defectCount').textContent = defectCount;
+            const passRate = inspectionCount > 0 ? ((inspectionCount - defectCount) / inspectionCount * 100).toFixed(1) : 100;
+            document.getElementById('passRate').textContent = `${passRate}%`;
+        }
+        
+        function generateUUID() {
+            return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+                const r = Math.random() * 16 | 0;
+                const v = c == 'x' ? r : (r & 0x3 | 0x8);
+                return v.toString(16);
+            });
+        }
+        
+        // Connect to API and WebSocket (same as before)
+        function connectToSystem() {
+            axios.get(`${API_URL}/api/health`)
+                .then(response => {
+                    logEvent('info', `Connected to API - Mode: ${response.data.mode}`);
+                    connected = true;
+                    updateConnectionStatus();
+                    loadDashboardData();
+                    connectWebSocket();
+                })
+                .catch(error => {
+                    logEvent('error', `Failed to connect to API: ${error.message}`);
+                    setTimeout(connectToSystem, 5000);
+                });
+        }
+        
+        function connectWebSocket() {
+            socket = io(API_URL);
+            
+            socket.on('connect', () => {
+                logEvent('info', 'WebSocket connected for real-time updates');
+                updateConnectionStatus();
+            });
+            
+            socket.on('disconnect', () => {
+                logEvent('warn', 'WebSocket disconnected');
+                connected = false;
+                updateConnectionStatus();
+            });
+            
+            socket.on('plc/tags', (data) => {
+                updatePLCTags(data);
+            });
+            
+            socket.on('dashboard/status', (status) => {
+                updateDashboardStatus(status);
+            });
+        }
+        
+        function loadDashboardData() {
+            axios.get(`${API_URL}/api/dashboard/status`)
+                .then(response => {
+                    updateDashboardStatus(response.data);
+                })
+                .catch(error => {
+                    logEvent('error', `Failed to load dashboard data: ${error.message}`);
+                });
+        }
+        
+        function updateConnectionStatus() {
+            const dot = document.getElementById('connectionDot');
+            const status = document.getElementById('connectionStatus');
+            
+            if (connected) {
+                dot.classList.add('connected');
+                status.textContent = 'Connected';
+                status.style.color = '#10b981';
+            } else {
+                dot.classList.remove('connected');
+                status.textContent = 'Disconnected';
+                status.style.color = '#ef4444';
+            }
+        }
+        
+        function updateDashboardStatus(status) {
+            const lineStatusElement = document.getElementById('lineStatus');
+            const lineStatusText = document.getElementById('lineStatusText');
+            
+            let statusClass = 'status-running';
+            let statusText = 'Running';
+            
+            switch (status.lineState) {
+                case 0:
+                    statusClass = 'status-stopped';
+                    statusText = 'Stopped';
+                    break;
+                case 1:
+                    statusClass = 'status-running';
+                    statusText = 'Running';
+                    break;
+                case 2:
+                    statusClass = 'status-paused';
+                    statusText = 'Paused';
+                    break;
+                case 3:
+                    statusClass = 'status-fault';
+                    statusText = 'Fault';
+                    break;
+            }
+            
+            lineStatusElement.className = `status-badge ${statusClass}`;
+            lineStatusText.textContent = statusText;
+            
+            document.getElementById('partCounter').textContent = status.partCounter || 0;
+            document.getElementById('oeeScore').textContent = `${status.oeeScore || 0}%`;
+            document.getElementById('qualityScore').textContent = `${status.qualityScore || 0}%`;
+            
+            if (status.throughput) {
+                document.getElementById('throughput').textContent = 
+                    `${status.throughput.current}/${status.throughput.target} pph`;
+            }
+        }
+        
+        function updatePLCTags(tags) {
+            if (tags['Station01.CycleTimeMs']) {
+                document.getElementById('cycleTime').textContent = `${tags['Station01.CycleTimeMs']}ms`;
+            }
+            if (tags['Process.Temperature']) {
+                document.getElementById('temperature').textContent = `${tags['Process.Temperature']}°C`;
+            }
+            if (tags['Process.Pressure']) {
+                document.getElementById('pressure').textContent = `${tags['Process.Pressure']} bar`;
+            }
+            if (tags['Part.Counter']) {
+                document.getElementById('partCounter').textContent = tags['Part.Counter'];
+            }
+        }
+        
+        function emergencyStop() {
+            if (confirm('⚠️ EMERGENCY STOP\n\nThis will immediately halt all production operations.\n\nAre you sure?')) {
+                axios.post(`${API_URL}/api/plc/write`, {
+                    tag: 'Emergency.Stop',
+                    value: true
+                })
+                .then(() => {
+                    logEvent('error', '🛑 EMERGENCY STOP ACTIVATED');
+                })
+                .catch(error => {
+                    logEvent('error', `Failed to activate emergency stop: ${error.message}`);
+                });
+            }
+        }
+        
+        function logEvent(level, message) {
+            const logContainer = document.getElementById('eventLog');
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = document.createElement('div');
+            logEntry.className = `log-entry ${level}`;
+            logEntry.textContent = `[${timestamp}] ${message}`;
+            
+            logContainer.appendChild(logEntry);
+            logContainer.scrollTop = logContainer.scrollHeight;
+            
+            while (logContainer.children.length > 50) {
+                logContainer.removeChild(logContainer.firstChild);
+            }
+        }
+        
+        // Start the system
+        updateCameraStatus();
+        connectToSystem();
+        
+        // Auto-start camera when page loads (with user permission)
+        window.addEventListener('load', () => {
+            logEvent('info', 'Click "Start Camera" to enable live vision inspection');
+        });
+    </script>
+</body>
+</html>

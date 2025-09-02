@@ -1,0 +1,16 @@
+{
+  "name": "vision-assembly-dashboard",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "concurrently \"npm run api:dev\" \"npm run web:dev\"",
+    "api:dev": "cd apps/api && npm run dev",
+    "web:dev": "cd apps/web && npm run dev",
+    "api:install": "cd apps/api && npm install",
+    "web:install": "cd apps/web && npm install",
+    "install:all": "npm run api:install && npm run web:install"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}

@@ -1,0 +1,1588 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Industrial Vision Assembly Dashboard - Enhanced</title>
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios@1.6.0/dist/axios.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Consolas', 'Monaco', monospace;
+            background: #0f172a;
+            color: #e2e8f0;
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+        
+        /* Header */
+        .header {
+            background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+            padding: 1rem 2rem;
+            border-bottom: 3px solid #3b82f6;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+        
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        
+        .logo-icon {
+            width: 48px;
+            height: 48px;
+            background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+        }
+        
+        .logo-text {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .logo-title {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #f8fafc;
+        }
+        
+        .logo-subtitle {
+            font-size: 0.85rem;
+            color: #94a3b8;
+        }
+        
+        .header-controls {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        
+        .help-btn {
+            background: #059669;
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.2s;
+        }
+        
+        .help-btn:hover {
+            background: #047857;
+            transform: scale(1.05);
+        }
+        
+        /* Help System */
+        .help-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.8);
+            display: none;
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .help-modal {
+            background: #1e293b;
+            border-radius: 1rem;
+            padding: 2rem;
+            max-width: 800px;
+            max-height: 80vh;
+            overflow-y: auto;
+            border: 2px solid #3b82f6;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
+        }
+        
+        .help-close {
+            float: right;
+            background: #ef4444;
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        
+        /* Instruction Banner */
+        .instruction-banner {
+            background: linear-gradient(135deg, #1e40af, #3b82f6);
+            color: white;
+            padding: 1rem 2rem;
+            text-align: center;
+            animation: pulse 3s infinite;
+        }
+        
+        .instruction-banner.hidden {
+            display: none;
+        }
+        
+        .instruction-text {
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+        }
+        
+        .instruction-steps {
+            font-size: 0.9rem;
+            opacity: 0.9;
+        }
+        
+        /* Tabs */
+        .tab-container {
+            background: #1e293b;
+            border-bottom: 1px solid #334155;
+        }
+        
+        .tab-nav {
+            display: flex;
+            padding: 0 2rem;
+        }
+        
+        .tab-btn {
+            background: none;
+            border: none;
+            color: #94a3b8;
+            padding: 1rem 1.5rem;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            transition: all 0.2s;
+            font-weight: 500;
+        }
+        
+        .tab-btn.active {
+            color: #3b82f6;
+            border-bottom-color: #3b82f6;
+        }
+        
+        .tab-btn:hover {
+            color: #e2e8f0;
+        }
+        
+        /* Main Layout */
+        .main-container {
+            display: flex;
+            min-height: calc(100vh - 200px);
+        }
+        
+        .sidebar {
+            width: 300px;
+            background: #1e293b;
+            border-right: 1px solid #334155;
+            padding: 1.5rem;
+        }
+        
+        .main-content {
+            flex: 1;
+            padding: 1.5rem;
+            overflow: auto;
+        }
+        
+        /* Cards */
+        .card {
+            background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+            border: 1px solid #475569;
+            border-radius: 1rem;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+            transition: all 0.3s;
+        }
+        
+        .card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.4);
+        }
+        
+        .card-header {
+            display: flex;
+            align-items: center;
+            justify-content: between;
+            margin-bottom: 1rem;
+        }
+        
+        .card-title {
+            color: #f1f5f9;
+            font-size: 1.1rem;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .card-help {
+            background: #3b82f6;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            font-size: 12px;
+            cursor: pointer;
+            margin-left: auto;
+        }
+        
+        /* Status indicators */
+        .status-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+        
+        .status-card {
+            background: #1e293b;
+            border: 1px solid #334155;
+            border-radius: 0.75rem;
+            padding: 1rem;
+            text-align: center;
+            transition: all 0.2s;
+        }
+        
+        .status-card:hover {
+            border-color: #3b82f6;
+        }
+        
+        .status-icon {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        .status-value {
+            font-size: 1.5rem;
+            font-weight: bold;
+            margin-bottom: 0.25rem;
+        }
+        
+        .status-label {
+            color: #94a3b8;
+            font-size: 0.9rem;
+        }
+        
+        /* Vision System */
+        .vision-container {
+            position: relative;
+            background: #000;
+            border-radius: 1rem;
+            overflow: hidden;
+            aspect-ratio: 16/9;
+            margin-bottom: 1rem;
+        }
+        
+        .vision-placeholder {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            color: #64748b;
+            font-size: 1.1rem;
+        }
+        
+        #webcamVideo {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        
+        .vision-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            pointer-events: none;
+        }
+        
+        .defect-box {
+            position: absolute;
+            border: 3px solid #ef4444;
+            background: rgba(239, 68, 68, 0.1);
+            border-radius: 4px;
+            animation: defectPulse 2s ease-in-out infinite;
+        }
+        
+        .defect-label {
+            position: absolute;
+            top: -25px;
+            left: 0;
+            background: #ef4444;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 3px;
+            font-size: 12px;
+            font-weight: bold;
+            white-space: nowrap;
+        }
+        
+        .camera-controls {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+            flex-wrap: wrap;
+        }
+        
+        .btn {
+            padding: 0.75rem 1rem;
+            border: none;
+            border-radius: 0.5rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            min-height: 44px;
+        }
+        
+        .btn-primary { background: #3b82f6; color: white; }
+        .btn-primary:hover { background: #2563eb; }
+        .btn-success { background: #10b981; color: white; }
+        .btn-success:hover { background: #059669; }
+        .btn-danger { background: #ef4444; color: white; }
+        .btn-danger:hover { background: #dc2626; }
+        .btn-warning { background: #f59e0b; color: white; }
+        .btn-warning:hover { background: #d97706; }
+        
+        /* Charts */
+        .chart-container {
+            position: relative;
+            height: 300px;
+            margin-bottom: 1rem;
+        }
+        
+        /* Metrics grid */
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+        
+        .metric-card {
+            background: #0f172a;
+            border: 1px solid #334155;
+            border-radius: 0.5rem;
+            padding: 1rem;
+            text-align: center;
+        }
+        
+        .metric-value {
+            font-size: 1.8rem;
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+        }
+        
+        .metric-value.good { color: #10b981; }
+        .metric-value.warning { color: #f59e0b; }
+        .metric-value.critical { color: #ef4444; }
+        
+        .metric-label {
+            color: #64748b;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        /* Alarms */
+        .alarm-item {
+            background: #0f172a;
+            border: 1px solid #334155;
+            border-radius: 0.5rem;
+            padding: 1rem;
+            margin-bottom: 0.5rem;
+            border-left: 4px solid #ef4444;
+        }
+        
+        .alarm-item.cleared {
+            border-left-color: #10b981;
+            opacity: 0.6;
+        }
+        
+        .alarm-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.5rem;
+        }
+        
+        .alarm-code {
+            font-weight: bold;
+            color: #ef4444;
+        }
+        
+        .alarm-time {
+            color: #64748b;
+            font-size: 0.8rem;
+        }
+        
+        /* Log */
+        .log-container {
+            background: #0f172a;
+            border: 1px solid #334155;
+            border-radius: 0.5rem;
+            padding: 1rem;
+            height: 300px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 0.85rem;
+        }
+        
+        .log-entry {
+            padding: 0.25rem 0;
+            border-bottom: 1px solid #1e293b;
+        }
+        
+        .log-entry.info { color: #93c5fd; }
+        .log-entry.warn { color: #fcd34d; }
+        .log-entry.error { color: #fca5a5; }
+        .log-entry.success { color: #86efac; }
+        
+        /* Tooltips */
+        .tooltip {
+            position: relative;
+        }
+        
+        .tooltip:hover .tooltip-text {
+            visibility: visible;
+            opacity: 1;
+        }
+        
+        .tooltip-text {
+            visibility: hidden;
+            width: 200px;
+            background-color: #1f2937;
+            color: #fff;
+            text-align: center;
+            border-radius: 6px;
+            padding: 8px;
+            position: absolute;
+            z-index: 1;
+            bottom: 125%;
+            left: 50%;
+            margin-left: -100px;
+            opacity: 0;
+            transition: opacity 0.3s;
+            font-size: 0.8rem;
+            border: 1px solid #374151;
+        }
+        
+        /* Animation */
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+        
+        @keyframes defectPulse {
+            0%, 100% { opacity: 0.8; }
+            50% { opacity: 0.4; }
+        }
+        
+        /* Responsive */
+        @media (max-width: 768px) {
+            .main-container {
+                flex-direction: column;
+            }
+            
+            .sidebar {
+                width: 100%;
+                border-right: none;
+                border-bottom: 1px solid #334155;
+            }
+            
+            .header {
+                padding: 1rem;
+            }
+            
+            .logo-title {
+                font-size: 1.2rem;
+            }
+        }
+        
+        /* Feature highlights */
+        .feature-highlight {
+            background: linear-gradient(135deg, #059669, #10b981);
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 1rem;
+            font-size: 0.8rem;
+            font-weight: bold;
+            display: inline-block;
+            margin: 0.25rem;
+        }
+        
+        .new-badge {
+            background: #ef4444;
+            color: white;
+            padding: 0.2rem 0.5rem;
+            border-radius: 0.25rem;
+            font-size: 0.7rem;
+            font-weight: bold;
+            margin-left: 0.5rem;
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <div class="header">
+        <div class="logo">
+            <div class="logo-icon">🏭</div>
+            <div class="logo-text">
+                <div class="logo-title">Industrial Vision Dashboard <span class="new-badge">ENHANCED</span></div>
+                <div class="logo-subtitle">AI-Powered Quality Control System</div>
+            </div>
+        </div>
+        <div class="header-controls">
+            <div class="tooltip">
+                <div class="status-value" id="systemStatus">●</div>
+                <span class="tooltip-text">System Status: Online</span>
+            </div>
+            <button class="help-btn" onclick="showHelp()">❓ Help & Instructions</button>
+        </div>
+    </div>
+    
+    <!-- Instruction Banner -->
+    <div class="instruction-banner" id="instructionBanner">
+        <div class="instruction-text">👋 Welcome to the Industrial Vision Dashboard!</div>
+        <div class="instruction-steps">
+            🎯 Click "Start Camera" to begin live inspection • 📊 Monitor real-time metrics • 🚨 Test emergency controls • ❓ Click "Help" for detailed instructions
+        </div>
+    </div>
+    
+    <!-- Help Modal -->
+    <div class="help-overlay" id="helpOverlay">
+        <div class="help-modal">
+            <button class="help-close" onclick="hideHelp()">✕ Close</button>
+            <h2>🏭 Industrial Vision Dashboard - User Guide</h2>
+            
+            <h3>🎯 What This System Does:</h3>
+            <ul>
+                <li><strong>Live Vision Inspection:</strong> Uses your camera to simulate AI-powered defect detection</li>
+                <li><strong>Production Monitoring:</strong> Tracks parts, quality, and performance in real-time</li>
+                <li><strong>Safety Controls:</strong> Emergency stop and alarm management</li>
+                <li><strong>Analytics:</strong> Historical trends and quality statistics</li>
+            </ul>
+            
+            <h3>📹 Camera System Instructions:</h3>
+            <ol>
+                <li><strong>Click "▶️ Start Camera"</strong> - Enables your laptop camera</li>
+                <li><strong>Allow camera access</strong> when browser prompts</li>
+                <li><strong>Automatic inspections</strong> run every 3 seconds</li>
+                <li><strong>Red boxes show "defects"</strong> with confidence scores</li>
+                <li><strong>Statistics update</strong> automatically (pass rate, defect count)</li>
+            </ol>
+            
+            <h3>🔍 Defect Types Detected:</h3>
+            <div class="feature-highlight">Foreign Object (Critical)</div>
+            <div class="feature-highlight">Surface Scratch (Medium)</div>
+            <div class="feature-highlight">Contamination (Critical)</div>
+            <div class="feature-highlight">Edge Defect (Medium)</div>
+            <div class="feature-highlight">Color Variation (Low)</div>
+            
+            <h3>📊 Dashboard Features:</h3>
+            <ul>
+                <li><strong>Production Metrics:</strong> Part count, cycle time, throughput</li>
+                <li><strong>Quality Tracking:</strong> OEE score, pass rate, defect statistics</li>
+                <li><strong>Process Variables:</strong> Temperature, pressure, humidity monitoring</li>
+                <li><strong>Alarm System:</strong> Real-time alerts with auto-clearing</li>
+                <li><strong>Historical Charts:</strong> Trend analysis and quality control</li>
+            </ul>
+            
+            <h3>🎛️ Controls & Actions:</h3>
+            <ul>
+                <li><strong>📸 Capture:</strong> Take snapshot for inspection</li>
+                <li><strong>⏹️ Stop Camera:</strong> Disable camera feed</li>
+                <li><strong>🛑 Emergency Stop:</strong> Immediately halt production</li>
+                <li><strong>🔄 Reset:</strong> Clear alarms and restart</li>
+                <li><strong>📈 View Trends:</strong> Access historical data</li>
+            </ul>
+            
+            <h3>🎭 Demo Tips:</h3>
+            <ul>
+                <li>Position yourself in good lighting for best "detection"</li>
+                <li>Watch for red bounding boxes appearing on video</li>
+                <li>Monitor statistics updating in real-time</li>
+                <li>Test emergency stop functionality</li>
+                <li>Check different tabs for various features</li>
+            </ul>
+        </div>
+    </div>
+    
+    <!-- Tabs -->
+    <div class="tab-container">
+        <div class="tab-nav">
+            <button class="tab-btn active" onclick="showTab('overview')">📊 Overview</button>
+            <button class="tab-btn" onclick="showTab('vision')">📹 Vision System</button>
+            <button class="tab-btn" onclick="showTab('analytics')">📈 Analytics</button>
+            <button class="tab-btn" onclick="showTab('quality')">🎯 Quality</button>
+            <button class="tab-btn" onclick="showTab('maintenance')">🔧 Maintenance</button>
+        </div>
+    </div>
+    
+    <div class="main-container">
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">🎛️ System Controls</h3>
+                </div>
+                
+                <div style="margin-bottom: 1rem;">
+                    <div class="tooltip">
+                        <button class="btn btn-success" style="width: 100%; margin-bottom: 0.5rem;" onclick="startCamera()">
+                            ▶️ Start Camera
+                        </button>
+                        <span class="tooltip-text">Activate laptop camera for live vision inspection</span>
+                    </div>
+                    
+                    <div class="tooltip">
+                        <button class="btn btn-warning" style="width: 100%; margin-bottom: 0.5rem;" onclick="stopCamera()">
+                            ⏹️ Stop Camera
+                        </button>
+                        <span class="tooltip-text">Disable camera and stop inspections</span>
+                    </div>
+                    
+                    <div class="tooltip">
+                        <button class="btn btn-primary" style="width: 100%; margin-bottom: 0.5rem;" onclick="captureFrame()">
+                            📸 Capture & Inspect
+                        </button>
+                        <span class="tooltip-text">Take snapshot and run immediate inspection</span>
+                    </div>
+                </div>
+                
+                <div style="border-top: 1px solid #334155; padding-top: 1rem;">
+                    <div class="tooltip">
+                        <button class="btn btn-danger" style="width: 100%; margin-bottom: 0.5rem;" onclick="emergencyStop()">
+                            🛑 EMERGENCY STOP
+                        </button>
+                        <span class="tooltip-text">Immediately halt all production operations</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">📊 Live Status</h3>
+                </div>
+                
+                <div class="metrics-grid">
+                    <div class="metric-card">
+                        <div class="metric-value good" id="partCounter">0</div>
+                        <div class="metric-label">Parts Made</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-value" id="inspectionCount">0</div>
+                        <div class="metric-label">Inspected</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-value" id="defectCount">0</div>
+                        <div class="metric-label">Defects</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-value good" id="passRate">100%</div>
+                        <div class="metric-label">Pass Rate</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">🚨 Active Alarms</h3>
+                </div>
+                <div id="alarmList">
+                    <div style="color: #10b981; text-align: center; padding: 1rem;">
+                        ✅ No Active Alarms
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Main Content -->
+        <div class="main-content">
+            <!-- Overview Tab -->
+            <div id="overview-tab" class="tab-content">
+                <!-- Status Grid -->
+                <div class="status-grid">
+                    <div class="status-card tooltip">
+                        <div class="status-icon">🏭</div>
+                        <div class="status-value" id="lineStatusText">Running</div>
+                        <div class="status-label">Production Line</div>
+                        <span class="tooltip-text">Current production line status</span>
+                    </div>
+                    <div class="status-card tooltip">
+                        <div class="status-icon">📹</div>
+                        <div class="status-value" id="cameraStatusText">Offline</div>
+                        <div class="status-label">Vision System</div>
+                        <span class="tooltip-text">Camera and AI inspection status</span>
+                    </div>
+                    <div class="status-card tooltip">
+                        <div class="status-icon">📊</div>
+                        <div class="status-value good" id="oeeScore">87.5%</div>
+                        <div class="status-label">OEE Score</div>
+                        <span class="tooltip-text">Overall Equipment Effectiveness</span>
+                    </div>
+                    <div class="status-card tooltip">
+                        <div class="status-icon">🎯</div>
+                        <div class="status-value good" id="qualityScore">96.8%</div>
+                        <div class="status-label">Quality Score</div>
+                        <span class="tooltip-text">Current quality performance</span>
+                    </div>
+                </div>
+                
+                <!-- Performance Chart -->
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">📈 Performance Trends</h3>
+                        <button class="card-help" onclick="showTooltip(this, 'Real-time production performance tracking')">?</button>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="performanceChart"></canvas>
+                    </div>
+                </div>
+                
+                <!-- Process Variables -->
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">🌡️ Process Variables</h3>
+                    </div>
+                    <div class="metrics-grid">
+                        <div class="metric-card tooltip">
+                            <div class="metric-value" id="temperature">22.5°C</div>
+                            <div class="metric-label">Temperature</div>
+                            <span class="tooltip-text">Current process temperature</span>
+                        </div>
+                        <div class="metric-card tooltip">
+                            <div class="metric-value" id="pressure">6.2 bar</div>
+                            <div class="metric-label">Pressure</div>
+                            <span class="tooltip-text">System pressure reading</span>
+                        </div>
+                        <div class="metric-card tooltip">
+                            <div class="metric-value" id="cycleTime">850ms</div>
+                            <div class="metric-label">Cycle Time</div>
+                            <span class="tooltip-text">Time per part production</span>
+                        </div>
+                        <div class="metric-card tooltip">
+                            <div class="metric-value" id="throughput">142 pph</div>
+                            <div class="metric-label">Throughput</div>
+                            <span class="tooltip-text">Parts per hour rate</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Vision Tab -->
+            <div id="vision-tab" class="tab-content" style="display: none;">
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">📹 Live Vision Inspection</h3>
+                        <button class="card-help" onclick="showTooltip(this, 'AI-powered defect detection using your laptop camera')">?</button>
+                    </div>
+                    
+                    <div class="vision-container">
+                        <video id="webcamVideo" autoplay muted style="display: none;"></video>
+                        <div class="vision-placeholder" id="visionPlaceholder">
+                            <div style="font-size: 3rem; margin-bottom: 1rem;">📹</div>
+                            <div>Click "Start Camera" to begin live inspection</div>
+                            <div style="font-size: 0.9rem; color: #64748b; margin-top: 0.5rem;">
+                                AI will detect defects and show bounding boxes
+                            </div>
+                        </div>
+                        <canvas id="captureCanvas" style="display: none;"></canvas>
+                        <div class="vision-overlay" id="defectOverlay"></div>
+                    </div>
+                    
+                    <div class="metrics-grid">
+                        <div class="metric-card">
+                            <div class="metric-value" id="frameRate">0 FPS</div>
+                            <div class="metric-label">Frame Rate</div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-value" id="processingTime">0ms</div>
+                            <div class="metric-label">Processing</div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-value" id="lastDefectType">None</div>
+                            <div class="metric-label">Last Defect</div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-value" id="avgConfidence">0%</div>
+                            <div class="metric-label">Avg Confidence</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Analytics Tab -->
+            <div id="analytics-tab" class="tab-content" style="display: none;">
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">📈 Quality Analytics</h3>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="qualityChart"></canvas>
+                    </div>
+                </div>
+                
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">🎯 Defect Distribution</h3>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="defectChart"></canvas>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Quality Tab -->
+            <div id="quality-tab" class="tab-content" style="display: none;">
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">🎯 Quality Control Charts</h3>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="spcChart"></canvas>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Maintenance Tab -->
+            <div id="maintenance-tab" class="tab-content" style="display: none;">
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">🔧 System Maintenance</h3>
+                    </div>
+                    <div class="metrics-grid">
+                        <div class="metric-card">
+                            <div class="metric-value good">98.5%</div>
+                            <div class="metric-label">Uptime</div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-value">15d</div>
+                            <div class="metric-label">Last Service</div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-value warning">7d</div>
+                            <div class="metric-label">Next PM</div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-value good">Normal</div>
+                            <div class="metric-label">Health</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Event Log -->
+    <div style="max-width: 1600px; margin: 2rem auto; padding: 0 2rem;">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">📋 Live Event Log</h3>
+                <button class="card-help" onclick="showTooltip(this, 'Real-time system events and activities')">?</button>
+            </div>
+            <div class="log-container" id="eventLog">
+                <div class="log-entry info">[Enhanced] Industrial Vision Dashboard initialized with advanced features</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global variables
+        let socket;
+        let connected = false;
+        let cameraActive = false;
+        let webcamStream = null;
+        let inspectionCount = 0;
+        let defectCount = 0;
+        let activeDefects = [];
+        let performanceChart, qualityChart, defectChart, spcChart;
+        let performanceData = [];
+        let qualityData = [];
+        let defectTypeData = {
+            'foreign_object': 0,
+            'surface_scratch': 0,
+            'contamination': 0,
+            'edge_defect': 0,
+            'color_variation': 0
+        };
+        
+        const API_URL = 'http://localhost:4000';
+        const video = document.getElementById('webcamVideo');
+        const canvas = document.getElementById('captureCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        // Initialize system
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeCharts();
+            connectToSystem();
+            updateTimestamp();
+            setInterval(updateTimestamp, 1000);
+            
+            // Auto-hide instruction banner after 10 seconds
+            setTimeout(() => {
+                const banner = document.getElementById('instructionBanner');
+                banner.classList.add('hidden');
+            }, 10000);
+            
+            logEvent('info', 'Enhanced Industrial Vision Dashboard loaded with advanced features');
+        });
+        
+        // Help system
+        function showHelp() {
+            document.getElementById('helpOverlay').style.display = 'flex';
+        }
+        
+        function hideHelp() {
+            document.getElementById('helpOverlay').style.display = 'none';
+        }
+        
+        // Tab system
+        function showTab(tabName) {
+            // Hide all tabs
+            const tabs = document.querySelectorAll('.tab-content');
+            tabs.forEach(tab => tab.style.display = 'none');
+            
+            // Remove active class from all buttons
+            const buttons = document.querySelectorAll('.tab-btn');
+            buttons.forEach(btn => btn.classList.remove('active'));
+            
+            // Show selected tab and activate button
+            document.getElementById(tabName + '-tab').style.display = 'block';
+            event.target.classList.add('active');
+            
+            logEvent('info', `Switched to ${tabName} view`);
+        }
+        
+        // Tooltip system
+        function showTooltip(element, message) {
+            // Simple alert for now - could be enhanced with proper tooltip positioning
+            alert(message);
+        }
+        
+        // Camera functions
+        async function startCamera() {
+            try {
+                logEvent('info', 'Requesting camera access...');
+                
+                const constraints = {
+                    video: {
+                        width: { ideal: 1280 },
+                        height: { ideal: 720 },
+                        frameRate: { ideal: 30 }
+                    },
+                    audio: false
+                };
+                
+                webcamStream = await navigator.mediaDevices.getUserMedia(constraints);
+                video.srcObject = webcamStream;
+                
+                video.onloadedmetadata = () => {
+                    canvas.width = video.videoWidth;
+                    canvas.height = video.videoHeight;
+                    
+                    cameraActive = true;
+                    video.style.display = 'block';
+                    document.getElementById('visionPlaceholder').style.display = 'none';
+                    updateCameraStatus();
+                    logEvent('success', `Camera started: ${video.videoWidth}x${video.videoHeight} at 30fps`);
+                    
+                    // Start automatic inspections
+                    setInterval(performInspection, 3000);
+                    setInterval(updateFrameRate, 1000);
+                };
+                
+            } catch (error) {
+                logEvent('error', `Camera access failed: ${error.message}`);
+                alert('Camera access denied. Please allow camera permissions and try again.');
+            }
+        }
+        
+        function stopCamera() {
+            if (webcamStream) {
+                webcamStream.getTracks().forEach(track => track.stop());
+                webcamStream = null;
+                video.srcObject = null;
+                video.style.display = 'none';
+                document.getElementById('visionPlaceholder').style.display = 'flex';
+                cameraActive = false;
+                updateCameraStatus();
+                clearDefectOverlays();
+                logEvent('warn', 'Camera stopped - Vision inspection disabled');
+            }
+        }
+        
+        function captureFrame() {
+            if (!cameraActive) {
+                logEvent('error', 'Camera not active - Cannot capture frame');
+                alert('Please start the camera first');
+                return;
+            }
+            
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            logEvent('info', 'Frame captured for immediate inspection');
+            performInspection();
+        }
+        
+        function updateCameraStatus() {
+            const statusText = document.getElementById('cameraStatusText');
+            if (cameraActive) {
+                statusText.textContent = 'Active';
+                statusText.style.color = '#10b981';
+            } else {
+                statusText.textContent = 'Offline';
+                statusText.style.color = '#ef4444';
+            }
+        }
+        
+        function updateFrameRate() {
+            if (cameraActive) {
+                document.getElementById('frameRate').textContent = '30 FPS';
+            } else {
+                document.getElementById('frameRate').textContent = '0 FPS';
+            }
+        }
+        
+        // Vision inspection
+        function performInspection() {
+            if (!cameraActive) return;
+            
+            const startTime = Date.now();
+            inspectionCount++;
+            document.getElementById('inspectionCount').textContent = inspectionCount;
+            
+            clearDefectOverlays();
+            
+            const defectChance = 0.15;
+            
+            if (Math.random() < defectChance) {
+                const defectTypes = [
+                    { name: 'foreign_object', display: 'FOREIGN OBJECT', color: '#ef4444' },
+                    { name: 'surface_scratch', display: 'SURFACE SCRATCH', color: '#f59e0b' },
+                    { name: 'contamination', display: 'CONTAMINATION', color: '#ef4444' },
+                    { name: 'edge_defect', display: 'EDGE DEFECT', color: '#f59e0b' },
+                    { name: 'color_variation', display: 'COLOR VARIATION', color: '#6366f1' }
+                ];
+                
+                const randomDefect = defectTypes[Math.floor(Math.random() * defectTypes.length)];
+                const confidence = 0.65 + Math.random() * 0.3;
+                
+                const x = Math.random() * 0.6 + 0.2;
+                const y = Math.random() * 0.6 + 0.2;
+                const width = Math.random() * 0.15 + 0.05;
+                const height = Math.random() * 0.15 + 0.05;
+                
+                const defect = {
+                    id: generateUUID(),
+                    type: randomDefect.name,
+                    display: randomDefect.display,
+                    confidence: confidence,
+                    x: x,
+                    y: y,
+                    width: width,
+                    height: height,
+                    color: randomDefect.color,
+                    timestamp: Date.now()
+                };
+                
+                defectCount++;
+                defectTypeData[defect.type]++;
+                activeDefects.push(defect);
+                
+                displayDefectOverlay(defect);
+                updateDefectCharts();
+                
+                logEvent('warn', `DEFECT DETECTED: ${defect.display} with ${(confidence * 100).toFixed(1)}% confidence`);
+                
+                document.getElementById('lastDefectType').textContent = defect.display;
+                
+                setTimeout(() => removeDefectOverlay(defect.id), 5000);
+            } else {
+                logEvent('success', '✅ PART PASSED - No defects detected');
+            }
+            
+            const processingTime = Date.now() - startTime;
+            document.getElementById('processingTime').textContent = processingTime + 'ms';
+            
+            updateInspectionStats();
+            updatePerformanceData();
+        }
+        
+        function displayDefectOverlay(defect) {
+            const overlay = document.getElementById('defectOverlay');
+            
+            const defectBox = document.createElement('div');
+            defectBox.className = 'defect-box';
+            defectBox.id = `defect-${defect.id}`;
+            
+            defectBox.style.left = `${defect.x * 100}%`;
+            defectBox.style.top = `${defect.y * 100}%`;
+            defectBox.style.width = `${defect.width * 100}%`;
+            defectBox.style.height = `${defect.height * 100}%`;
+            defectBox.style.borderColor = defect.color;
+            defectBox.style.backgroundColor = defect.color + '20';
+            
+            const label = document.createElement('div');
+            label.className = 'defect-label';
+            label.style.backgroundColor = defect.color;
+            label.textContent = `${defect.display} ${(defect.confidence * 100).toFixed(0)}%`;
+            
+            defectBox.appendChild(label);
+            overlay.appendChild(defectBox);
+        }
+        
+        function removeDefectOverlay(defectId) {
+            const defectElement = document.getElementById(`defect-${defectId}`);
+            if (defectElement) {
+                defectElement.remove();
+            }
+            activeDefects = activeDefects.filter(d => d.id !== defectId);
+        }
+        
+        function clearDefectOverlays() {
+            const overlay = document.getElementById('defectOverlay');
+            overlay.innerHTML = '';
+            activeDefects = [];
+        }
+        
+        function updateInspectionStats() {
+            document.getElementById('defectCount').textContent = defectCount;
+            const passRate = inspectionCount > 0 ? ((inspectionCount - defectCount) / inspectionCount * 100).toFixed(1) : 100;
+            document.getElementById('passRate').textContent = `${passRate}%`;
+            
+            // Update average confidence
+            if (activeDefects.length > 0) {
+                const avgConf = activeDefects.reduce((sum, d) => sum + d.confidence, 0) / activeDefects.length;
+                document.getElementById('avgConfidence').textContent = `${(avgConf * 100).toFixed(0)}%`;
+            }
+        }
+        
+        // Charts
+        function initializeCharts() {
+            // Performance Chart
+            const performanceCtx = document.getElementById('performanceChart').getContext('2d');
+            performanceChart = new Chart(performanceCtx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'OEE Score',
+                        data: [],
+                        borderColor: '#10b981',
+                        backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                        tension: 0.4
+                    }, {
+                        label: 'Quality Score',
+                        data: [],
+                        borderColor: '#3b82f6',
+                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: 'Real-time Performance Tracking',
+                            color: '#e2e8f0'
+                        },
+                        legend: {
+                            labels: {
+                                color: '#e2e8f0'
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            ticks: { color: '#94a3b8' },
+                            grid: { color: '#334155' }
+                        },
+                        y: {
+                            ticks: { color: '#94a3b8' },
+                            grid: { color: '#334155' },
+                            min: 0,
+                            max: 100
+                        }
+                    }
+                }
+            });
+            
+            // Quality Chart
+            const qualityCtx = document.getElementById('qualityChart').getContext('2d');
+            qualityChart = new Chart(qualityCtx, {
+                type: 'bar',
+                data: {
+                    labels: ['Pass', 'Fail'],
+                    datasets: [{
+                        label: 'Parts',
+                        data: [0, 0],
+                        backgroundColor: ['#10b981', '#ef4444']
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: 'Quality Distribution',
+                            color: '#e2e8f0'
+                        },
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        x: {
+                            ticks: { color: '#94a3b8' },
+                            grid: { color: '#334155' }
+                        },
+                        y: {
+                            ticks: { color: '#94a3b8' },
+                            grid: { color: '#334155' }
+                        }
+                    }
+                }
+            });
+            
+            // Defect Chart
+            const defectCtx = document.getElementById('defectChart').getContext('2d');
+            defectChart = new Chart(defectCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Foreign Object', 'Surface Scratch', 'Contamination', 'Edge Defect', 'Color Variation'],
+                    datasets: [{
+                        data: [0, 0, 0, 0, 0],
+                        backgroundColor: ['#ef4444', '#f59e0b', '#ef4444', '#f59e0b', '#6366f1']
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: 'Defect Types Distribution',
+                            color: '#e2e8f0'
+                        },
+                        legend: {
+                            labels: {
+                                color: '#e2e8f0'
+                            }
+                        }
+                    }
+                }
+            });
+            
+            // SPC Chart
+            const spcCtx = document.getElementById('spcChart').getContext('2d');
+            spcChart = new Chart(spcCtx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'Quality Measurement',
+                        data: [],
+                        borderColor: '#3b82f6',
+                        backgroundColor: 'rgba(59, 130, 246, 0.1)'
+                    }, {
+                        label: 'Upper Control Limit',
+                        data: [],
+                        borderColor: '#ef4444',
+                        borderDash: [5, 5],
+                        fill: false
+                    }, {
+                        label: 'Lower Control Limit',
+                        data: [],
+                        borderColor: '#ef4444',
+                        borderDash: [5, 5],
+                        fill: false
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: 'Statistical Process Control Chart',
+                            color: '#e2e8f0'
+                        },
+                        legend: {
+                            labels: {
+                                color: '#e2e8f0'
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            ticks: { color: '#94a3b8' },
+                            grid: { color: '#334155' }
+                        },
+                        y: {
+                            ticks: { color: '#94a3b8' },
+                            grid: { color: '#334155' }
+                        }
+                    }
+                }
+            });
+        }
+        
+        function updatePerformanceData() {
+            const now = new Date().toLocaleTimeString();
+            
+            performanceData.push({
+                time: now,
+                oee: parseFloat(document.getElementById('oeeScore').textContent),
+                quality: parseFloat(document.getElementById('qualityScore').textContent)
+            });
+            
+            if (performanceData.length > 20) {
+                performanceData.shift();
+            }
+            
+            performanceChart.data.labels = performanceData.map(d => d.time);
+            performanceChart.data.datasets[0].data = performanceData.map(d => d.oee);
+            performanceChart.data.datasets[1].data = performanceData.map(d => d.quality);
+            performanceChart.update();
+        }
+        
+        function updateDefectCharts() {
+            // Update quality chart
+            const passCount = inspectionCount - defectCount;
+            qualityChart.data.datasets[0].data = [passCount, defectCount];
+            qualityChart.update();
+            
+            // Update defect distribution
+            defectChart.data.datasets[0].data = [
+                defectTypeData.foreign_object,
+                defectTypeData.surface_scratch,
+                defectTypeData.contamination,
+                defectTypeData.edge_defect,
+                defectTypeData.color_variation
+            ];
+            defectChart.update();
+            
+            // Update SPC chart (simplified)
+            const measurement = 95 + Math.random() * 10;
+            const time = new Date().toLocaleTimeString();
+            
+            if (spcChart.data.labels.length > 20) {
+                spcChart.data.labels.shift();
+                spcChart.data.datasets[0].data.shift();
+                spcChart.data.datasets[1].data.shift();
+                spcChart.data.datasets[2].data.shift();
+            }
+            
+            spcChart.data.labels.push(time);
+            spcChart.data.datasets[0].data.push(measurement);
+            spcChart.data.datasets[1].data.push(105); // UCL
+            spcChart.data.datasets[2].data.push(85);  // LCL
+            spcChart.update();
+        }
+        
+        // API and WebSocket functions (same as before but with enhanced logging)
+        function connectToSystem() {
+            axios.get(`${API_URL}/api/health`)
+                .then(response => {
+                    logEvent('success', `🔗 Connected to API - Mode: ${response.data.mode} - Uptime: ${Math.round(response.data.uptime)}s`);
+                    connected = true;
+                    updateConnectionStatus();
+                    loadDashboardData();
+                    connectWebSocket();
+                })
+                .catch(error => {
+                    logEvent('error', `❌ API connection failed: ${error.message}`);
+                    setTimeout(connectToSystem, 5000);
+                });
+        }
+        
+        function connectWebSocket() {
+            socket = io(API_URL);
+            
+            socket.on('connect', () => {
+                logEvent('success', '🔌 WebSocket connected - Real-time updates enabled');
+                updateConnectionStatus();
+            });
+            
+            socket.on('disconnect', () => {
+                logEvent('warn', '🔌 WebSocket disconnected - Attempting reconnection');
+                connected = false;
+                updateConnectionStatus();
+            });
+            
+            socket.on('plc/tags', (data) => {
+                updatePLCTags(data);
+            });
+            
+            socket.on('dashboard/status', (status) => {
+                updateDashboardStatus(status);
+            });
+            
+            socket.on('vision/defect', (defect) => {
+                logEvent('warn', `🔍 PLC Defect detected: ${defect.class}`);
+            });
+            
+            socket.on('alarm/raised', (alarm) => {
+                handleAlarmRaised(alarm);
+            });
+            
+            socket.on('alarm/cleared', (alarm) => {
+                handleAlarmCleared(alarm);
+            });
+        }
+        
+        function loadDashboardData() {
+            axios.get(`${API_URL}/api/dashboard/status`)
+                .then(response => {
+                    updateDashboardStatus(response.data);
+                })
+                .catch(error => {
+                    logEvent('error', `📊 Failed to load dashboard data: ${error.message}`);
+                });
+        }
+        
+        function updateConnectionStatus() {
+            const statusElement = document.getElementById('systemStatus');
+            if (connected) {
+                statusElement.textContent = '●';
+                statusElement.style.color = '#10b981';
+            } else {
+                statusElement.textContent = '●';
+                statusElement.style.color = '#ef4444';
+            }
+        }
+        
+        function updateDashboardStatus(status) {
+            const statusMap = {
+                0: { text: 'Stopped', color: '#ef4444' },
+                1: { text: 'Running', color: '#10b981' },
+                2: { text: 'Paused', color: '#f59e0b' },
+                3: { text: 'Fault', color: '#ef4444' }
+            };
+            
+            const lineStatus = statusMap[status.lineState] || statusMap[0];
+            const lineStatusElement = document.getElementById('lineStatusText');
+            lineStatusElement.textContent = lineStatus.text;
+            lineStatusElement.style.color = lineStatus.color;
+            
+            document.getElementById('partCounter').textContent = status.partCounter || 0;
+            document.getElementById('oeeScore').textContent = `${status.oeeScore || 0}%`;
+            document.getElementById('qualityScore').textContent = `${status.qualityScore || 0}%`;
+            
+            if (status.throughput) {
+                document.getElementById('throughput').textContent = 
+                    `${status.throughput.current} pph`;
+            }
+        }
+        
+        function updatePLCTags(tags) {
+            if (tags['Station01.CycleTimeMs']) {
+                document.getElementById('cycleTime').textContent = `${tags['Station01.CycleTimeMs']}ms`;
+            }
+            if (tags['Process.Temperature']) {
+                document.getElementById('temperature').textContent = `${tags['Process.Temperature']}°C`;
+            }
+            if (tags['Process.Pressure']) {
+                document.getElementById('pressure').textContent = `${tags['Process.Pressure']} bar`;
+            }
+            if (tags['Part.Counter']) {
+                document.getElementById('partCounter').textContent = tags['Part.Counter'];
+            }
+        }
+        
+        function handleAlarmRaised(alarm) {
+            const alarmList = document.getElementById('alarmList');
+            alarmList.innerHTML = `
+                <div class="alarm-item">
+                    <div class="alarm-header">
+                        <span class="alarm-code">${alarm.code}</span>
+                        <span class="alarm-time">${new Date(alarm.timestamp).toLocaleTimeString()}</span>
+                    </div>
+                    <div>${alarm.message}</div>
+                    <div style="font-size: 0.8rem; color: #64748b;">Station ${alarm.station} - ${alarm.severity}</div>
+                </div>
+            `;
+            
+            logEvent('error', `🚨 ALARM RAISED: ${alarm.code} - ${alarm.message} (Station ${alarm.station})`);
+        }
+        
+        function handleAlarmCleared(alarm) {
+            const alarmList = document.getElementById('alarmList');
+            alarmList.innerHTML = `
+                <div style="color: #10b981; text-align: center; padding: 1rem;">
+                    ✅ No Active Alarms
+                </div>
+            `;
+            
+            logEvent('success', `✅ Alarm cleared: ${alarm.code}`);
+        }
+        
+        function emergencyStop() {
+            if (confirm('⚠️ EMERGENCY STOP\n\nThis will immediately halt all production operations.\n\nAre you sure?')) {
+                axios.post(`${API_URL}/api/plc/write`, {
+                    tag: 'Emergency.Stop',
+                    value: true
+                })
+                .then(() => {
+                    logEvent('error', '🛑 EMERGENCY STOP ACTIVATED - All operations halted immediately');
+                    alert('🛑 EMERGENCY STOP ACTIVATED\n\nAll production operations have been halted immediately for safety.');
+                })
+                .catch(error => {
+                    logEvent('error', `❌ Emergency stop failed: ${error.message}`);
+                });
+            }
+        }
+        
+        function updateTimestamp() {
+            const now = new Date();
+            // This function can be expanded for more timestamp displays
+        }
+        
+        function generateUUID() {
+            return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+                const r = Math.random() * 16 | 0;
+                const v = c == 'x' ? r : (r & 0x3 | 0x8);
+                return v.toString(16);
+            });
+        }
+        
+        function logEvent(level, message) {
+            const logContainer = document.getElementById('eventLog');
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = document.createElement('div');
+            logEntry.className = `log-entry ${level}`;
+            logEntry.textContent = `[${timestamp}] ${message}`;
+            
+            logContainer.appendChild(logEntry);
+            logContainer.scrollTop = logContainer.scrollHeight;
+            
+            while (logContainer.children.length > 100) {
+                logContainer.removeChild(logContainer.firstChild);
+            }
+        }
+    </script>
+</body>
+</html>

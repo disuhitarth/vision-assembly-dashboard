@@ -9,7 +9,7 @@
 ## 📸 Screenshots
 
 ### Main Dashboard - Live Vision Inspection
-![Main Dashboard](screenshots/Main-Dashboard.png)
+![Main Dashboard](screenshots/main-dashboard.png)
 *Real-time production monitoring with automated defect detection*
 
 ### Vision System - Live Camera Feed  

@@ -17,7 +17,7 @@
 *Live camera feed with defect detection overlays and confidence scoring*
 
 ### Analytics Dashboard
-![Analytics](screenshots/analytics-dashboard.png)  
+![Analytics](screenshots/Dashboard_Image.png.png)  
 *Comprehensive quality analytics and statistical process control*
 
 ---
